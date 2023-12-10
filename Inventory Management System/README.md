@@ -1,1 +1,2 @@
-
+# Introduction
+This folder contains a c++ code to build an inventory management system. Although this is a small sized project, I made proper use of major OOPS concepts like inheritance,polymorphism,overriding,classes and file handling. The goal of this project is not to demonstrate a complete inventory management system, rather it demonstrates the use of above mentioned object oriented langauge concepts built together for an inventory management system.
