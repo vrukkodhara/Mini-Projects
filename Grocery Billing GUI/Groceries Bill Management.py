@@ -1,26 +1,95 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[9]:
+# In[31]:
 
 
+import sqlite3
 from tkinter import *
-bill={}
-def save_bill_click(self):
-    print('Bill saved')
-    print(bill)
-def add_to_bill_click(self):
-    indexes=[]
-    qty=(e3.get())
-    indexes=lb1.curselection()
+
+# Create a connection to the SQLite database
+conn = sqlite3.connect('billing_database.db')
+cursor = conn.cursor()
+
+# Create a table to store item information
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS items (
+        id INTEGER PRIMARY KEY,
+        name TEXT,
+        quantity INTEGER,
+        cost REAL,
+        expiry_date TEXT
+    )
+''')
+
+# Create a table to store customer information
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS customers (
+        id INTEGER PRIMARY KEY,
+        name TEXT,
+        address TEXT
+    )
+''')
+
+# Create a table to store bills
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS bills (
+        id INTEGER PRIMARY KEY,
+        customer_id INTEGER,
+        item_name TEXT,
+        quantity INTEGER,
+        cost REAL,
+        FOREIGN KEY (customer_id) REFERENCES customers(id)
+    )
+''')
+
+# Commit the changes and close the connection
+conn.commit()
+conn.close()
+
+# Rest of the code remains the same with the following modifications:
+
+# Update the add_to_bill_click function to insert data into the bills table
+def add_to_bill_click():
+    indexes = lb1.curselection()
+    qty = int(e3.get())
+
     for i in indexes:
-        list_for_qty_remain[i]-=int(qty)
-        bill.update({list_for_lb1[i] : int(qty)*list_for_cost[i]})
-    for i in range(0,6):
-        lb2.delete(ACTIVE,i)
+        item_name = list_for_lb1[i]
+        item_cost = list_for_cost[i]
+        list_for_qty_remain[i] -= qty
+
+        # Update the stock quantity in the items table
+        conn = sqlite3.connect('billing_database.db')
+        cursor = conn.cursor()
+        cursor.execute('UPDATE items SET quantity = ? WHERE name = ?', (list_for_qty_remain[i], item_name))
+        conn.commit()
+        conn.close()
+
+        # Add the item to the bill table
+        conn = sqlite3.connect('billing_database.db')
+        cursor = conn.cursor()
+        cursor.execute('INSERT INTO bills (customer_id, item_name, quantity, cost) VALUES (?, ?, ?, ?)',
+                       (1, item_name, qty, qty * item_cost))
+        conn.commit()
+        conn.close()
+
+    refresh_stock_click()
+
+
+# Update the refresh_stock_click function to fetch data from the items table
 def refresh_stock_click(self):
-     for i in list_for_qty_remain:
-        lb2.insert(ANCHOR,i)
+    # Fetch data from the items table
+    conn = sqlite3.connect('billing_database.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT name, quantity FROM items')
+    items_data = cursor.fetchall()
+    conn.close()
+
+    lb2.delete(0, END)
+    for item in items_data:
+        lb2.insert(END, f"{item[0]} - Qty: {item[1]}")
+
 def printing_bill_click(self):
     print(f'Customer Name :  {e1.get()}')
     print('Item                                  Cost(In Rs)')
@@ -34,6 +103,30 @@ def reset_bill_click(self):
     bill.clear()
     for i in range(0,6):
         lb2.delete(ACTIVE,i)
+def apply_styles():
+    root.configure(bg='#F0F0F0')  # Set the background color of the main window
+    f.configure(bg='#D9D9D9')  # Set the background color of the frame
+
+    # Style for buttons
+    button_style = {'bg': '#4CAF50', 'fg': 'white', 'relief': 'raised', 'font': ('Helvetica', 10, 'bold')}
+
+    # Apply style to buttons
+    for button in [b1, b2, b3, b4, select_item, qty_remain, cost, expiry_date, quantity, save_bill, add_to_bill]:
+        button.configure(**button_style)
+
+    # Apply style to listboxes
+    listbox_style = {'bg': 'white', 'fg': 'black', 'selectbackground': '#3498db', 'selectforeground': 'white',
+                     'font': ('Helvetica', 10)}
+
+    lb1.configure(**listbox_style)
+    lb2.configure(**listbox_style)
+    lb3.configure(**listbox_style)
+    lb4.configure(**listbox_style)
+def save_bill_click(self):
+    print('Bill saved')
+    print(bill)
+# ... (Rest of the code remains the same)
+
 root=Tk()
 root.geometry('1000x500')
 root.title('Billing')
@@ -104,6 +197,9 @@ add_to_bill.bind('<Button-1>',add_to_bill_click)
 add_to_bill.place(x=830,y=350)
 for i in list_for_qty_remain:
         lb2.insert(END,i)
+
+# Main Loop
+apply_styles()  # Apply styles before entering the main loop
 root.mainloop()
 
 
